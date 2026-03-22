@@ -96,7 +96,8 @@ export const getProperties = async (req, res) => {
     
     let query = { status: 'approved', isArchived: false };
     
-    if (search) {
+    // Search by title, description, or location
+    if (search && search.trim() !== '') {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
@@ -104,10 +105,25 @@ export const getProperties = async (req, res) => {
       ];
     }
     
-    if (minPrice) query.price = { ...query.price, $gte: Number(minPrice) };
-    if (maxPrice) query.price = { ...query.price, $lte: Number(maxPrice) };
-    if (location) query.location = { $regex: location, $options: 'i' };
-    if (bedrooms) query.bedrooms = Number(bedrooms);
+    // Price range filter
+    if (minPrice && minPrice !== '') {
+      query.price = { ...query.price, $gte: Number(minPrice) };
+    }
+    if (maxPrice && maxPrice !== '') {
+      query.price = { ...query.price, $lte: Number(maxPrice) };
+    }
+    
+    // Location filter (additional to search)
+    if (location && location.trim() !== '') {
+      query.location = { $regex: location, $options: 'i' };
+    }
+    
+    // Bedrooms filter
+    if (bedrooms && bedrooms !== '') {
+      query.bedrooms = { $gte: Number(bedrooms) };
+    }
+    
+    console.log('Query:', JSON.stringify(query, null, 2)); // Debug log
     
     const properties = await Property.find(query)
       .populate('landownerId', 'name email')
@@ -123,7 +139,6 @@ export const getProperties = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
-
 // @desc    Get single property
 // @route   GET /api/properties/:id
 export const getPropertyById = async (req, res) => {
