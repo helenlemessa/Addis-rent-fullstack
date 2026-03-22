@@ -157,19 +157,19 @@ const PropertyDetail = () => {
               </div>
             )}
 
+            {/* Updated Contact Section - Shows property-specific phone number */}
             <div className="border-t pt-6">
-              <h2 className="text-xl font-semibold mb-4">Contact Landowner</h2>
+              <h2 className="text-xl font-semibold mb-4">Contact Information</h2>
               <div className="bg-gray-50 rounded-lg p-4">
-                <p className="font-semibold text-lg mb-2">{property.landownerId.name}</p>
+                <p className="font-semibold text-lg mb-2">Property Contact</p>
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <FaPhone className="text-gray-500 mr-2" />
-                    <span>{property.landownerId.phone || 'Not provided'}</span>
+                    <span className="text-lg">{property.contactPhone || 'Not provided'}</span>
                   </div>
-                  <div className="flex items-center">
-                    <FaEnvelope className="text-gray-500 mr-2" />
-                    <span>{property.landownerId.email}</span>
-                  </div>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Call this number to inquire about this property
+                  </p>
                 </div>
               </div>
             </div>

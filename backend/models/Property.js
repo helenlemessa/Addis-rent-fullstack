@@ -42,6 +42,12 @@ const propertySchema = new mongoose.Schema({
   amenities: [{
     type: String
   }],
+  // New field: Contact phone number for this property
+  contactPhone: {
+    type: String,
+    required: true,
+    trim: true
+  },
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected', 'archived'],

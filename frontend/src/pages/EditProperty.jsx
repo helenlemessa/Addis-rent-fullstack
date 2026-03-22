@@ -4,6 +4,8 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { FaTrash, FaPlus } from 'react-icons/fa';
 import Navbar from '../components/Navbar';
+import PhoneInput from '../components/PhoneInput';
+import { validateEthiopianPhone } from '../utils/phoneValidation';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -13,6 +15,7 @@ const EditProperty = () => {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [property, setProperty] = useState(null);
+  const [phoneError, setPhoneError] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -21,6 +24,7 @@ const EditProperty = () => {
     bedrooms: '',
     bathrooms: '',
     area: '',
+    contactPhone: '',
     amenities: []
   });
   const [amenityInput, setAmenityInput] = useState('');
@@ -43,6 +47,7 @@ const EditProperty = () => {
         bedrooms: propertyData.bedrooms,
         bathrooms: propertyData.bathrooms,
         area: propertyData.area,
+        contactPhone: propertyData.contactPhone || '',
         amenities: propertyData.amenities || []
       });
     } catch (error) {
@@ -56,6 +61,16 @@ const EditProperty = () => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handlePhoneChange = (phone) => {
+    setFormData({ ...formData, contactPhone: phone });
+    const validation = validateEthiopianPhone(phone);
+    if (phone && !validation.valid) {
+      setPhoneError(validation.message);
+    } else {
+      setPhoneError('');
+    }
   };
 
   const addAmenity = () => {
@@ -77,6 +92,14 @@ const EditProperty = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate phone number before submission
+    const phoneValidation = validateEthiopianPhone(formData.contactPhone);
+    if (!phoneValidation.valid) {
+      toast.error(phoneValidation.message);
+      return;
+    }
+    
     setLoading(true);
     
     try {
@@ -85,13 +108,7 @@ const EditProperty = () => {
       });
       
       toast.success(response.data.message || 'Property updated successfully');
-      
-      // Redirect based on property status
-      if (property.status === 'approved') {
-        navigate('/my-properties');
-      } else {
-        navigate('/my-properties');
-      }
+      navigate('/my-properties');
     } catch (error) {
       console.error('Update property error:', error);
       toast.error(error.response?.data?.message || 'Failed to update property');
@@ -246,6 +263,21 @@ const EditProperty = () => {
             </div>
           </div>
           
+          {/* Contact Information with Phone Validation */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4">Contact Information</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Phone Number for This Property *
+              </label>
+              <PhoneInput
+                value={formData.contactPhone}
+                onChange={handlePhoneChange}
+                required={true}
+              />
+            </div>
+          </div>
+          
           {/* Amenities */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold mb-4">Amenities</h2>
@@ -299,7 +331,7 @@ const EditProperty = () => {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !!phoneError}
               className="btn-primary disabled:opacity-50"
             >
               {loading ? 'Saving...' : 'Save Changes'}

@@ -4,6 +4,8 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { FaPlus, FaTrash, FaUpload } from 'react-icons/fa';
 import Navbar from '../components/Navbar';
+import PhoneInput from '../components/PhoneInput';
+import { validateEthiopianPhone } from '../utils/phoneValidation';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -18,14 +20,35 @@ const CreateProperty = () => {
     bedrooms: '',
     bathrooms: '',
     area: '',
+    contactPhone: '',
     amenities: []
   });
+  const [phoneError, setPhoneError] = useState('');
+  const [isPhoneValid, setIsPhoneValid] = useState(false);
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [amenityInput, setAmenityInput] = useState('');
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handlePhoneChange = (phone) => {
+    setFormData({ ...formData, contactPhone: phone });
+    
+    if (phone && phone.trim() !== '') {
+      const validation = validateEthiopianPhone(phone);
+      if (!validation.valid) {
+        setPhoneError(validation.message);
+        setIsPhoneValid(false);
+      } else {
+        setPhoneError('');
+        setIsPhoneValid(true);
+      }
+    } else {
+      setPhoneError('Phone number is required');
+      setIsPhoneValid(false);
+    }
   };
 
   const handleImageChange = (e) => {
@@ -37,7 +60,6 @@ const CreateProperty = () => {
     
     setImages([...images, ...files]);
     
-    // Create previews
     const newPreviews = files.map(file => URL.createObjectURL(file));
     setImagePreviews([...imagePreviews, ...newPreviews]);
   };
@@ -66,11 +88,51 @@ const CreateProperty = () => {
     });
   };
 
+  // Check if form is valid for submission
+  const isFormValid = () => {
+    const requiredFields = [
+      formData.title,
+      formData.description,
+      formData.price,
+      formData.location,
+      formData.bedrooms,
+      formData.bathrooms,
+      formData.area,
+      formData.contactPhone
+    ];
+    
+    const allFieldsFilled = requiredFields.every(field => field && field.trim() !== '');
+    const hasImages = images.length > 0;
+    const phoneValid = isPhoneValid;
+    
+    console.log('Form validation:', {
+      allFieldsFilled,
+      hasImages,
+      phoneValid,
+      contactPhone: formData.contactPhone,
+      phoneError
+    });
+    
+    return allFieldsFilled && hasImages && phoneValid;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    console.log('Submit attempted');
+    console.log('Form data:', formData);
+    console.log('Images count:', images.length);
+    console.log('Phone valid:', isPhoneValid);
+    
     if (images.length === 0) {
       toast.error('Please upload at least one image');
+      return;
+    }
+    
+    // Validate phone number before submission
+    const phoneValidation = validateEthiopianPhone(formData.contactPhone);
+    if (!phoneValidation.valid) {
+      toast.error(phoneValidation.message);
       return;
     }
     
@@ -84,6 +146,7 @@ const CreateProperty = () => {
     data.append('bedrooms', formData.bedrooms);
     data.append('bathrooms', formData.bathrooms);
     data.append('area', formData.area);
+    data.append('contactPhone', formData.contactPhone);
     data.append('amenities', JSON.stringify(formData.amenities));
     
     images.forEach(image => {
@@ -230,6 +293,24 @@ const CreateProperty = () => {
             </div>
           </div>
           
+          {/* Contact Information with Phone Validation */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4">Contact Information</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Phone Number for This Property *
+              </label>
+              <PhoneInput
+                value={formData.contactPhone}
+                onChange={handlePhoneChange}
+                required={true}
+              />
+              {phoneError && (
+                <p className="mt-1 text-xs text-red-600">{phoneError}</p>
+              )}
+            </div>
+          </div>
+          
           {/* Images Upload */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold mb-4">Property Images</h2>
@@ -276,6 +357,9 @@ const CreateProperty = () => {
                   </div>
                 ))}
               </div>
+            )}
+            {images.length === 0 && (
+              <p className="mt-2 text-xs text-red-600">At least one image is required</p>
             )}
           </div>
           
@@ -332,8 +416,9 @@ const CreateProperty = () => {
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="btn-primary disabled:opacity-50"
+              disabled={loading || !isFormValid()}
+              className={`btn-primary ${(!isFormValid() || loading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title={!isFormValid() ? 'Please fill all required fields and upload images' : ''}
             >
               {loading ? 'Posting...' : 'Post Property'}
             </button>
