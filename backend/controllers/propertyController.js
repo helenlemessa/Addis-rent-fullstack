@@ -44,7 +44,26 @@ const validateEthiopianPhone = (phone) => {
 // @route   POST /api/properties
 export const createProperty = async (req, res) => {
   try {
-    const { title, description, price, location, bedrooms, bathrooms, area, amenities, contactPhone } = req.body;
+    // Log everything to debug
+    console.log('=== CREATE PROPERTY DEBUG ===');
+    console.log('req.body:', JSON.stringify(req.body, null, 2));
+    console.log('req.files:', req.files ? req.files.length : 0);
+    console.log('All body fields:', Object.keys(req.body));
+    console.log('contactPhone from body:', req.body.contactPhone);
+    console.log('============================');
+    
+    // Get all fields from req.body
+    const { 
+      title, 
+      description, 
+      price, 
+      location, 
+      bedrooms, 
+      bathrooms, 
+      area, 
+      amenities,
+      contactPhone 
+    } = req.body;
     
     // Get image URLs from uploaded files
     const images = req.files ? req.files.map(file => file.path) : [];
@@ -53,30 +72,65 @@ export const createProperty = async (req, res) => {
       return res.status(400).json({ message: 'At least one image is required' });
     }
     
-    // Validate contact phone
-    if (!contactPhone) {
-      return res.status(400).json({ message: 'Contact phone number is required' });
+    // Validate contact phone - check multiple sources
+    let finalContactPhone = contactPhone;
+    
+    // If contactPhone is undefined, try to get it from req.body directly
+    if (!finalContactPhone && req.body.contactPhone) {
+      finalContactPhone = req.body.contactPhone;
     }
     
-    const phoneValidation = validateEthiopianPhone(contactPhone);
+    // If still undefined, try to get it from the raw body
+    if (!finalContactPhone && req.body['contactPhone']) {
+      finalContactPhone = req.body['contactPhone'];
+    }
+    
+    console.log('Final contact phone to save:', finalContactPhone);
+    
+    if (!finalContactPhone) {
+      return res.status(400).json({ 
+        message: 'Contact phone number is required',
+        receivedBody: req.body 
+      });
+    }
+    
+    const phoneValidation = validateEthiopianPhone(finalContactPhone);
     if (!phoneValidation.valid) {
       return res.status(400).json({ message: phoneValidation.message });
     }
     
-    const property = await Property.create({
+    // Parse amenities if it's a string
+    let parsedAmenities = [];
+    if (amenities) {
+      try {
+        parsedAmenities = typeof amenities === 'string' ? JSON.parse(amenities) : amenities;
+      } catch (e) {
+        console.error('Error parsing amenities:', e);
+        parsedAmenities = [];
+      }
+    }
+    
+    const propertyData = {
       landownerId: req.user._id,
       title,
       description,
-      price,
+      price: Number(price),
       location,
-      bedrooms,
-      bathrooms,
-      area,
+      bedrooms: Number(bedrooms),
+      bathrooms: Number(bathrooms),
+      area: Number(area),
       images,
-      amenities: amenities ? JSON.parse(amenities) : [],
-      contactPhone,
-      status: 'pending' // Needs admin approval
-    });
+      amenities: parsedAmenities,
+      contactPhone: finalContactPhone,
+      status: 'pending'
+    };
+    
+    console.log('Property data being saved:', propertyData);
+    
+    const property = await Property.create(propertyData);
+    
+    console.log('✅ Property created successfully!');
+    console.log('Saved property contactPhone:', property.contactPhone);
     
     res.status(201).json({
       success: true,
@@ -87,9 +141,6 @@ export const createProperty = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
-
-// @desc    Get all approved properties (tenants)
-// @route   GET /api/properties
 export const getProperties = async (req, res) => {
   try {
     const { search, minPrice, maxPrice, location, bedrooms } = req.query;
