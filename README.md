@@ -78,7 +78,7 @@ A full-stack property rental platform connecting landowners and tenants in Ethio
 
   Prerequisites
 
-- Node.js (v16 or higher)
+- Node.js  
 - MongoDB Atlas account
 - Cloudinary account
 - Gmail account (for nodemailer)
